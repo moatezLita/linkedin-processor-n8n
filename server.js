@@ -361,19 +361,31 @@ app.post('/api/process-profiles', (req, res) => {
   const startTime = Date.now();
   
   try {
-    // Get the data in the same format as n8n sends
-    const items = req.body;
+    // Get the data - handle both single object and array formats
+    let items = req.body;
     
-    console.log('📥 Received data type:', typeof items);
+    // If it's a single object, wrap it in an array
+    if (!Array.isArray(items)) {
+      if (items && typeof items === 'object') {
+        items = [items];
+        console.log('📥 Converted single object to array');
+      } else {
+        return res.status(400).json({
+          error: 'Invalid input format. Expected object or array.',
+          received: typeof items
+        });
+      }
+    }
+    
+    console.log('📥 Received data type:', typeof req.body);
     console.log('📥 Is array?', Array.isArray(items));
-    console.log('📥 Items count:', Array.isArray(items) ? items.length : 'N/A');
+    console.log('📥 Items count:', items.length);
     
     // Validate input
     if (!Array.isArray(items)) {
       return res.status(400).json({
-        error: 'Invalid input format. Expected array of items.',
-        received: typeof items,
-        sample: JSON.stringify(items).substring(0, 200)
+        error: 'Invalid input after processing. Contact support.',
+        received: typeof items
       });
     }
 
