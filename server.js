@@ -3,7 +3,29 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
+const cluster = require('cluster');
+const os = require('os');
 
+// Clustering for parallel processing
+if (cluster.isMaster && process.env.NODE_ENV === 'production') {
+  const numWorkers = Math.min(4, os.cpus().length); // Max 4 workers for Railway
+  
+  console.log(`🚀 Master process ${process.pid} starting ${numWorkers} workers`);
+  
+  for (let i = 0; i < numWorkers; i++) {
+    cluster.fork();
+  }
+  
+  cluster.on('exit', (worker, code, signal) => {
+    console.log(`⚠️  Worker ${worker.process.pid} died. Restarting...`);
+    cluster.fork();
+  });
+  
+  // Don't continue with Express setup in master process
+  return;
+}
+
+// Worker process continues with Express setup
 const app = express();
 
 // Security and optimization middleware
@@ -527,7 +549,8 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 LinkedIn Processor API running on port ${PORT}`);
+  const workerInfo = cluster.isWorker ? ` (Worker ${process.pid})` : '';
+  console.log(`🚀 LinkedIn Processor API${workerInfo} running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`🧪 Test endpoint: http://localhost:${PORT}/api/test`);
   console.log(`⚡ Process endpoint: http://localhost:${PORT}/api/process-profiles`);
@@ -535,10 +558,7 @@ app.listen(PORT, () => {
   // Memory optimization settings
   if (global.gc) {
     console.log('✅ Garbage collection enabled');
-    // Run initial cleanup
     global.gc();
-  } else {
-    console.log('⚠️  Garbage collection not available. Run with --expose-gc flag for better memory management');
   }
 });
 
