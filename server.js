@@ -529,6 +529,16 @@ app.post('/api/test', (req, res) => {
   }
 });
 
+app.get('/debug', (req, res) => {
+  res.json({
+    nodeEnv: process.env.NODE_ENV,
+    isMaster: cluster.isMaster,
+    isWorker: cluster.isWorker,
+    processId: process.pid,
+    workerId: cluster.worker?.id || 'master'
+  });
+});
+
 // Error handling middleware
 app.use((error, req, res, next) => {
   console.error('Unhandled error:', error);
