@@ -414,8 +414,8 @@ app.post('/api/process-profiles', (req, res) => {
       // Process the profile using your exact function
       const processedProfile = processProfile(profile);
 
-      // Add the processed profile to the output
-      outputItems.push({ json: processedProfile });
+      // Add the processed profile to the output - DIRECT FORMAT (no json wrapper)
+      outputItems.push(processedProfile);
 
       // Force garbage collection every 10 profiles
       if (i % 10 === 0 && global.gc) {
@@ -432,7 +432,7 @@ app.post('/api/process-profiles', (req, res) => {
       processingTimeMs: processingTime
     });
 
-    // Return the array of processed items - EXACT same format as n8n
+    // Return direct array of processed profiles (no json wrapper)
     res.json({
       items: outputItems,
       metadata: {
@@ -465,15 +465,20 @@ app.post('/api/test', (req, res) => {
   try {
     const testData = require('./test-data.json');
     
-    // Process using the same logic as the main endpoint
-    const filteredItems = testData.filter(el => el.json && el.json.hasOwnProperty('urn'));
-    const outputItems = [];
+    // Handle both formats like main endpoint
+    let profiles;
+    if (testData[0] && testData[0].json) {
+      const filteredItems = testData.filter(el => el.json && el.json.hasOwnProperty('urn'));
+      profiles = filteredItems.map(item => item.json);
+    } else {
+      profiles = testData.filter(el => el.hasOwnProperty('urn'));
+    }
 
-    for (let i = 0; i < filteredItems.length; i++) {
-      const item = filteredItems[i];
-      const profile = item.json;
+    const outputItems = [];
+    for (let i = 0; i < profiles.length; i++) {
+      const profile = profiles[i];
       const processedProfile = processProfile(profile);
-      outputItems.push({ json: processedProfile });
+      outputItems.push(processedProfile); // Direct format, no json wrapper
     }
 
     res.json({
